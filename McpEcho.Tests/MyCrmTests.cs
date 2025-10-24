@@ -3,13 +3,20 @@ using McpEcho;
 
 namespace McpEcho.Tests;
 
-public class MyCrmTests
+public class MyCrmTests : IDisposable
 {
     private readonly MyCrm _crm;
 
     public MyCrmTests()
     {
-        _crm = new MyCrm();
+        // Use a unique database for each test instance
+        var testDbPath = $"test_crm_{Guid.NewGuid()}.db";
+        _crm = new MyCrm(testDbPath);
+    }
+
+    public void Dispose()
+    {
+        _crm?.Dispose();
     }
 
     #region GetPersonById Tests
@@ -875,6 +882,64 @@ public class MyCrmTests
         var retrieved = _crm.GetPersonById(originalId);
         Assert.NotNull(retrieved);
         Assert.Equal("Updated", retrieved.Name);
+    }
+
+    #endregion
+
+    #region GetInstanceId Tests
+
+    [Fact]
+    public void GetInstanceId_ReturnsValidGuid()
+    {
+        // Act
+        var instanceId = _crm.GetInstanceId();
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, instanceId);
+    }
+
+    [Fact]
+    public void GetInstanceId_ReturnsSameIdForSameInstance()
+    {
+        // Act
+        var instanceId1 = _crm.GetInstanceId();
+        var instanceId2 = _crm.GetInstanceId();
+
+        // Assert
+        Assert.Equal(instanceId1, instanceId2);
+    }
+
+    [Fact]
+    public void GetInstanceId_ReturnsDifferentIdForDifferentInstances()
+    {
+        // Arrange
+        using var crm2 = new MyCrm($"test_crm_{Guid.NewGuid()}.db");
+
+        // Act
+        var instanceId1 = _crm.GetInstanceId();
+        var instanceId2 = crm2.GetInstanceId();
+
+        // Assert
+        Assert.NotEqual(instanceId1, instanceId2);
+    }
+
+    [Fact]
+    public void GetInstanceId_IsUniqueForEachRun()
+    {
+        // Arrange - Create multiple instances
+        using var crm1 = new MyCrm($"test_crm_{Guid.NewGuid()}.db");
+        using var crm2 = new MyCrm($"test_crm_{Guid.NewGuid()}.db");
+        using var crm3 = new MyCrm($"test_crm_{Guid.NewGuid()}.db");
+
+        // Act
+        var id1 = crm1.GetInstanceId();
+        var id2 = crm2.GetInstanceId();
+        var id3 = crm3.GetInstanceId();
+
+        // Assert - All IDs should be different
+        Assert.NotEqual(id1, id2);
+        Assert.NotEqual(id2, id3);
+        Assert.NotEqual(id1, id3);
     }
 
     #endregion

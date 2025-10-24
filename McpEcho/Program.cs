@@ -16,6 +16,7 @@ builder.Services
     .AddMcpServer()
    // .WithHttpTransport()
     .WithTools<MyCrm>()
+    .WithResources<CrmResources>()
     .WithStdioServerTransport();
     //.WithToolsFromAssembly();
 
