@@ -35,6 +35,10 @@ public class CrmDatabase : IDisposable
                 Name TEXT NOT NULL,
                 Surname TEXT NOT NULL,
                 Age INTEGER NOT NULL,
+                Sex TEXT NOT NULL,
+                Role TEXT NOT NULL,
+                Department TEXT NOT NULL,
+                CvSummary TEXT NOT NULL,
                 Skills TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_people_name ON People(Name);
@@ -57,9 +61,9 @@ public class CrmDatabase : IDisposable
     {
         var seedPeople = new List<Person>
         {
-            new Person(Guid.NewGuid(), "John", "Doe", 30, ["C#", "SQL", "Azure"]),
-            new Person(Guid.NewGuid(), "Jane", "Smith", 25, ["JavaScript", "React", "Node.js"]),
-            new Person(Guid.NewGuid(), "Alice", "Johnson", 28, ["Python", "Django", "Machine Learning"])
+            new Person(Guid.NewGuid(), "John", "Doe", 30, Sex.M, "Senior Developer", "Engineering", "Experienced software engineer with 10+ years in backend development, specializing in C# and cloud technologies.", ["C#", "SQL", "Azure"]),
+            new Person(Guid.NewGuid(), "Jane", "Smith", 25, Sex.F, "Frontend Developer", "Engineering", "Creative frontend developer focused on modern web technologies and user experience design.", ["JavaScript", "React", "Node.js"]),
+            new Person(Guid.NewGuid(), "Alice", "Johnson", 28, Sex.F, "Data Scientist", "Data Analytics", "Data scientist with expertise in machine learning and Python-based data analysis tools.", ["Python", "Django", "Machine Learning"])
         };
 
         foreach (var person in seedPeople)
@@ -74,7 +78,7 @@ public class CrmDatabase : IDisposable
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People WHERE Id = @id";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People WHERE Id = @id";
         command.Parameters.AddWithValue("@id", id.ToString());
 
         using var reader = command.ExecuteReader();
@@ -92,7 +96,7 @@ public class CrmDatabase : IDisposable
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People WHERE Name LIKE @name || '%' COLLATE NOCASE LIMIT 1";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People WHERE Name LIKE @name || '%' COLLATE NOCASE LIMIT 1";
         command.Parameters.AddWithValue("@name", name);
 
         using var reader = command.ExecuteReader();
@@ -110,7 +114,7 @@ public class CrmDatabase : IDisposable
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People WHERE Surname LIKE @surname || '%' COLLATE NOCASE LIMIT 1";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People WHERE Surname LIKE @surname || '%' COLLATE NOCASE LIMIT 1";
         command.Parameters.AddWithValue("@surname", surname);
 
         using var reader = command.ExecuteReader();
@@ -128,7 +132,7 @@ public class CrmDatabase : IDisposable
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People";
 
         var people = new List<Person>();
         using var reader = command.ExecuteReader();
@@ -144,13 +148,51 @@ public class CrmDatabase : IDisposable
         return people;
     }
 
+    public List<Person> GetByDepartment(string department)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People WHERE Department = @department COLLATE NOCASE";
+        command.Parameters.AddWithValue("@department", department);
+
+        var people = new List<Person>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            people.Add(ReadPerson(reader));
+        }
+
+        return people;
+    }
+
+    public List<Person> GetByRole(string role)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People WHERE Role = @role COLLATE NOCASE";
+        command.Parameters.AddWithValue("@role", role);
+
+        var people = new List<Person>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            people.Add(ReadPerson(reader));
+        }
+
+        return people;
+    }
+
     public List<Person> GetAll()
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People";
 
         var people = new List<Person>();
         using var reader = command.ExecuteReader();
@@ -174,10 +216,13 @@ public class CrmDatabase : IDisposable
 
         var command = connection.CreateCommand();
         command.CommandText = @"
-            SELECT Id, Name, Surname, Age, Skills 
+            SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills 
             FROM People 
             WHERE Name LIKE '%' || @query || '%' COLLATE NOCASE
                OR Surname LIKE '%' || @query || '%' COLLATE NOCASE
+               OR Role LIKE '%' || @query || '%' COLLATE NOCASE
+               OR Department LIKE '%' || @query || '%' COLLATE NOCASE
+               OR CvSummary LIKE '%' || @query || '%' COLLATE NOCASE
                OR Skills LIKE '%' || @query || '%' COLLATE NOCASE
         ";
         command.Parameters.AddWithValue("@query", query);
@@ -199,20 +244,24 @@ public class CrmDatabase : IDisposable
 
         var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO People (Id, Name, Surname, Age, Skills)
-            VALUES (@id, @name, @surname, @age, @skills)
+            INSERT INTO People (Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills)
+            VALUES (@id, @name, @surname, @age, @sex, @role, @department, @cvSummary, @skills)
         ";
         command.Parameters.AddWithValue("@id", person.Id.ToString());
         command.Parameters.AddWithValue("@name", person.Name);
         command.Parameters.AddWithValue("@surname", person.Surname);
         command.Parameters.AddWithValue("@age", person.Age);
+        command.Parameters.AddWithValue("@sex", person.Sex.ToString());
+        command.Parameters.AddWithValue("@role", person.Role);
+        command.Parameters.AddWithValue("@department", person.Department);
+        command.Parameters.AddWithValue("@cvSummary", person.CvSummary);
         command.Parameters.AddWithValue("@skills", JsonSerializer.Serialize(person.Skills));
 
         command.ExecuteNonQuery();
         return person;
     }
 
-    public Person? Update(Guid id, string name, string surname, int age, List<string> skills)
+    public Person? Update(Guid id, string name, string surname, int age, Sex sex, string role, string department, string cvSummary, List<string> skills)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -220,13 +269,17 @@ public class CrmDatabase : IDisposable
         var command = connection.CreateCommand();
         command.CommandText = @"
             UPDATE People 
-            SET Name = @name, Surname = @surname, Age = @age, Skills = @skills
+            SET Name = @name, Surname = @surname, Age = @age, Sex = @sex, Role = @role, Department = @department, CvSummary = @cvSummary, Skills = @skills
             WHERE Id = @id
         ";
         command.Parameters.AddWithValue("@id", id.ToString());
         command.Parameters.AddWithValue("@name", name);
         command.Parameters.AddWithValue("@surname", surname);
         command.Parameters.AddWithValue("@age", age);
+        command.Parameters.AddWithValue("@sex", sex.ToString());
+        command.Parameters.AddWithValue("@role", role);
+        command.Parameters.AddWithValue("@department", department);
+        command.Parameters.AddWithValue("@cvSummary", cvSummary);
         command.Parameters.AddWithValue("@skills", JsonSerializer.Serialize(skills));
 
         var rowsAffected = command.ExecuteNonQuery();
@@ -294,7 +347,7 @@ public class CrmDatabase : IDisposable
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Name, Surname, Age, Skills FROM People ORDER BY Age DESC LIMIT 1";
+        command.CommandText = "SELECT Id, Name, Surname, Age, Sex, Role, Department, CvSummary, Skills FROM People ORDER BY Age DESC LIMIT 1";
 
         using var reader = command.ExecuteReader();
         if (reader.Read())
@@ -317,10 +370,14 @@ public class CrmDatabase : IDisposable
         var name = reader.GetString(1);
         var surname = reader.GetString(2);
         var age = reader.GetInt32(3);
-        var skillsJson = reader.GetString(4);
+        var sex = Enum.Parse<Sex>(reader.GetString(4));
+        var role = reader.GetString(5);
+        var department = reader.GetString(6);
+        var cvSummary = reader.GetString(7);
+        var skillsJson = reader.GetString(8);
         var skills = JsonSerializer.Deserialize<List<string>>(skillsJson) ?? new List<string>();
 
-        return new Person(id, name, surname, age, skills);
+        return new Person(id, name, surname, age, sex, role, department, cvSummary, skills);
     }
 
     public void Dispose()

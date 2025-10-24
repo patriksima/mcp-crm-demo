@@ -212,6 +212,127 @@ public class MyCrmTests : IDisposable
 
     #endregion
 
+    #region GetPersonsByDepartment Tests
+
+    [Fact]
+    public void GetPersonsByDepartment_WithValidDepartment_ReturnsCorrectPersons()
+    {
+        // Act
+        var result = _crm.GetPersonsByDepartment("Engineering");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.All(result, person => Assert.Equal("Engineering", person.Department));
+    }
+
+    [Fact]
+    public void GetPersonsByDepartment_CaseInsensitive_ReturnsCorrectPersons()
+    {
+        // Act
+        var result = _crm.GetPersonsByDepartment("engineering");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.All(result, person => Assert.Equal("Engineering", person.Department, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void GetPersonsByDepartment_WithMultiplePeopleInDepartment_ReturnsAll()
+    {
+        // Act - Based on seed data, Engineering has 2 people (John and Jane)
+        var result = _crm.GetPersonsByDepartment("Engineering");
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, p => p.Name == "John");
+        Assert.Contains(result, p => p.Name == "Jane");
+    }
+
+    [Fact]
+    public void GetPersonsByDepartment_WithSinglePersonDepartment_ReturnsSinglePerson()
+    {
+        // Act - Based on seed data, Data Analytics has 1 person (Alice)
+        var result = _crm.GetPersonsByDepartment("Data Analytics");
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Alice", result.First().Name);
+    }
+
+    [Fact]
+    public void GetPersonsByDepartment_WithNonExistentDepartment_ReturnsEmptyList()
+    {
+        // Act
+        var result = _crm.GetPersonsByDepartment("NonExistentDepartment");
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region GetPersonsByRole Tests
+
+    [Fact]
+    public void GetPersonsByRole_WithValidRole_ReturnsCorrectPersons()
+    {
+        // Act
+        var result = _crm.GetPersonsByRole("Senior Developer");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.All(result, person => Assert.Equal("Senior Developer", person.Role));
+    }
+
+    [Fact]
+    public void GetPersonsByRole_CaseInsensitive_ReturnsCorrectPersons()
+    {
+        // Act
+        var result = _crm.GetPersonsByRole("senior developer");
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.All(result, person => Assert.Equal("Senior Developer", person.Role, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void GetPersonsByRole_WithUniquePeopleRole_ReturnsSinglePerson()
+    {
+        // Act - Based on seed data, each person has a unique role
+        var result = _crm.GetPersonsByRole("Data Scientist");
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Alice", result.First().Name);
+    }
+
+    [Fact]
+    public void GetPersonsByRole_WithNonExistentRole_ReturnsEmptyList()
+    {
+        // Act
+        var result = _crm.GetPersonsByRole("NonExistentRole");
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void GetPersonsByRole_AfterAddingPersonWithSameRole_ReturnsMultiple()
+    {
+        // Arrange
+        _crm.AddPerson("NewDev", "Test", 30, Sex.M, "Senior Developer", "Engineering", "Another senior dev", new List<string> { "C#" });
+
+        // Act
+        var result = _crm.GetPersonsByRole("Senior Developer");
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, p => p.Name == "John");
+        Assert.Contains(result, p => p.Name == "NewDev");
+    }
+
+    #endregion
+
     #region GetAllPersons Tests
 
     [Fact]
@@ -501,16 +622,24 @@ public class MyCrmTests : IDisposable
         var name = "Test";
         var surname = "User";
         var age = 35;
+        var sex = Sex.M;
+        var role = "Developer";
+        var department = "IT";
+        var cvSummary = "Test CV summary";
         var skills = new List<string> { "Skill1", "Skill2" };
 
         // Act
-        var person = new Person(id, name, surname, age, skills);
+        var person = new Person(id, name, surname, age, sex, role, department, cvSummary, skills);
 
         // Assert
         Assert.Equal(id, person.Id);
         Assert.Equal(name, person.Name);
         Assert.Equal(surname, person.Surname);
         Assert.Equal(age, person.Age);
+        Assert.Equal(sex, person.Sex);
+        Assert.Equal(role, person.Role);
+        Assert.Equal(department, person.Department);
+        Assert.Equal(cvSummary, person.CvSummary);
         Assert.Equal(skills, person.Skills);
     }
 
@@ -518,7 +647,7 @@ public class MyCrmTests : IDisposable
     public void Person_SkillsList_CanBeModified()
     {
         // Arrange
-        var person = new Person(Guid.NewGuid(), "Test", "User", 30, new List<string> { "Skill1" });
+        var person = new Person(Guid.NewGuid(), "Test", "User", 30, Sex.M, "Developer", "IT", "Test CV", new List<string> { "Skill1" });
 
         // Act
         person.Skills.Add("NewSkill");
@@ -540,16 +669,24 @@ public class MyCrmTests : IDisposable
         var name = "Bob";
         var surname = "Williams";
         var age = 35;
+        var sex = Sex.M;
+        var role = "Architect";
+        var department = "Engineering";
+        var cvSummary = "Senior architect with cloud expertise";
         var skills = new List<string> { "Java", "Spring", "Kubernetes" };
 
         // Act
-        var result = _crm.AddPerson(name, surname, age, skills);
+        var result = _crm.AddPerson(name, surname, age, sex, role, department, cvSummary, skills);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(name, result.Name);
         Assert.Equal(surname, result.Surname);
         Assert.Equal(age, result.Age);
+        Assert.Equal(sex, result.Sex);
+        Assert.Equal(role, result.Role);
+        Assert.Equal(department, result.Department);
+        Assert.Equal(cvSummary, result.CvSummary);
         Assert.Equal(skills, result.Skills);
         Assert.NotEqual(Guid.Empty, result.Id);
         
@@ -563,8 +700,8 @@ public class MyCrmTests : IDisposable
     public void AddPerson_GeneratesUniqueId()
     {
         // Act
-        var person1 = _crm.AddPerson("Test1", "User1", 30, new List<string> { "Skill1" });
-        var person2 = _crm.AddPerson("Test2", "User2", 31, new List<string> { "Skill2" });
+        var person1 = _crm.AddPerson("Test1", "User1", 30, Sex.M, "Dev", "IT", "CV1", new List<string> { "Skill1" });
+        var person2 = _crm.AddPerson("Test2", "User2", 31, Sex.F, "Dev", "IT", "CV2", new List<string> { "Skill2" });
 
         // Assert
         Assert.NotEqual(person1.Id, person2.Id);
@@ -579,10 +716,14 @@ public class MyCrmTests : IDisposable
         var name = "Charlie";
         var surname = "Brown";
         var age = 22;
+        var sex = Sex.M;
+        var role = "Junior";
+        var department = "IT";
+        var cvSummary = "Entry level position";
         var skills = new List<string>();
 
         // Act
-        var result = _crm.AddPerson(name, surname, age, skills);
+        var result = _crm.AddPerson(name, surname, age, sex, role, department, cvSummary, skills);
 
         // Assert
         Assert.NotNull(result);
@@ -594,7 +735,7 @@ public class MyCrmTests : IDisposable
     public void AddPerson_CanBeRetrievedById()
     {
         // Arrange & Act
-        var addedPerson = _crm.AddPerson("David", "Miller", 40, new List<string> { "Go", "Docker" });
+        var addedPerson = _crm.AddPerson("David", "Miller", 40, Sex.M, "DevOps", "Operations", "DevOps expert", new List<string> { "Go", "Docker" });
         var retrievedPerson = _crm.GetPersonById(addedPerson.Id);
 
         // Assert
@@ -609,7 +750,7 @@ public class MyCrmTests : IDisposable
     public void AddPerson_CanBeFoundByName()
     {
         // Arrange & Act
-        var addedPerson = _crm.AddPerson("Emma", "Davis", 27, new List<string> { "Ruby", "Rails" });
+        var addedPerson = _crm.AddPerson("Emma", "Davis", 27, Sex.F, "Developer", "Engineering", "Ruby specialist", new List<string> { "Ruby", "Rails" });
         var foundPerson = _crm.GetPersonByName("Emma");
 
         // Assert
@@ -629,10 +770,14 @@ public class MyCrmTests : IDisposable
         var newName = "UpdatedName";
         var newSurname = "UpdatedSurname";
         var newAge = 99;
+        var newSex = Sex.F;
+        var newRole = "UpdatedRole";
+        var newDepartment = "UpdatedDept";
+        var newCvSummary = "Updated CV";
         var newSkills = new List<string> { "NewSkill1", "NewSkill2" };
 
         // Act
-        var result = _crm.UpdatePerson(existingPerson.Id, newName, newSurname, newAge, newSkills);
+        var result = _crm.UpdatePerson(existingPerson.Id, newName, newSurname, newAge, newSex, newRole, newDepartment, newCvSummary, newSkills);
 
         // Assert
         Assert.NotNull(result);
@@ -640,6 +785,10 @@ public class MyCrmTests : IDisposable
         Assert.Equal(newName, result.Name);
         Assert.Equal(newSurname, result.Surname);
         Assert.Equal(newAge, result.Age);
+        Assert.Equal(newSex, result.Sex);
+        Assert.Equal(newRole, result.Role);
+        Assert.Equal(newDepartment, result.Department);
+        Assert.Equal(newCvSummary, result.CvSummary);
         Assert.Equal(newSkills, result.Skills);
     }
 
@@ -650,7 +799,7 @@ public class MyCrmTests : IDisposable
         var invalidId = Guid.NewGuid();
 
         // Act
-        var result = _crm.UpdatePerson(invalidId, "Test", "User", 30, new List<string>());
+        var result = _crm.UpdatePerson(invalidId, "Test", "User", 30, Sex.M, "Role", "Dept", "CV", new List<string>());
 
         // Assert
         Assert.Null(result);
@@ -665,7 +814,7 @@ public class MyCrmTests : IDisposable
         var newAge = 50;
 
         // Act
-        _crm.UpdatePerson(existingPerson.Id, newName, "PersistentSurname", newAge, new List<string>());
+        _crm.UpdatePerson(existingPerson.Id, newName, "PersistentSurname", newAge, Sex.M, "Role", "Dept", "CV", new List<string>());
         var retrievedPerson = _crm.GetPersonById(existingPerson.Id);
 
         // Assert
@@ -678,10 +827,10 @@ public class MyCrmTests : IDisposable
     public void UpdatePerson_CanClearSkills()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("Test", "User", 30, new List<string> { "Skill1", "Skill2" });
+        var addedPerson = _crm.AddPerson("Test", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string> { "Skill1", "Skill2" });
 
         // Act
-        var result = _crm.UpdatePerson(addedPerson.Id, "Test", "User", 30, new List<string>());
+        var result = _crm.UpdatePerson(addedPerson.Id, "Test", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
 
         // Assert
         Assert.NotNull(result);
@@ -692,11 +841,11 @@ public class MyCrmTests : IDisposable
     public void UpdatePerson_CanReplaceSkills()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("Test", "User", 30, new List<string> { "OldSkill" });
+        var addedPerson = _crm.AddPerson("Test", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string> { "OldSkill" });
         var newSkills = new List<string> { "NewSkill1", "NewSkill2", "NewSkill3" };
 
         // Act
-        var result = _crm.UpdatePerson(addedPerson.Id, "Test", "User", 30, newSkills);
+        var result = _crm.UpdatePerson(addedPerson.Id, "Test", "User", 30, Sex.M, "Dev", "IT", "CV", newSkills);
 
         // Assert
         Assert.NotNull(result);
@@ -715,7 +864,7 @@ public class MyCrmTests : IDisposable
         var originalId = existingPerson.Id;
 
         // Act
-        var result = _crm.UpdatePerson(originalId, "NewName", "NewSurname", 100, new List<string>());
+        var result = _crm.UpdatePerson(originalId, "NewName", "NewSurname", 100, Sex.M, "Role", "Dept", "CV", new List<string>());
 
         // Assert
         Assert.NotNull(result);
@@ -730,7 +879,7 @@ public class MyCrmTests : IDisposable
     public void DeletePerson_WithValidId_DeletesPersonSuccessfully()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("ToDelete", "User", 30, new List<string>());
+        var addedPerson = _crm.AddPerson("ToDelete", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
         var initialCount = _crm.GetAllPersons().Count;
 
         // Act
@@ -771,7 +920,7 @@ public class MyCrmTests : IDisposable
     public void DeletePerson_RemovedPersonNotFoundInSearch()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("Unique", "SearchName", 30, new List<string>());
+        var addedPerson = _crm.AddPerson("Unique", "SearchName", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
 
         // Act
         _crm.DeletePerson(addedPerson.Id);
@@ -785,7 +934,7 @@ public class MyCrmTests : IDisposable
     public void DeletePerson_RemovedPersonNotFoundByName()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("UniqueToDelete", "User", 30, new List<string>());
+        var addedPerson = _crm.AddPerson("UniqueToDelete", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
 
         // Act
         _crm.DeletePerson(addedPerson.Id);
@@ -799,8 +948,8 @@ public class MyCrmTests : IDisposable
     public void DeletePerson_CanDeleteMultiplePersons()
     {
         // Arrange
-        var person1 = _crm.AddPerson("Delete1", "User", 30, new List<string>());
-        var person2 = _crm.AddPerson("Delete2", "User", 31, new List<string>());
+        var person1 = _crm.AddPerson("Delete1", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
+        var person2 = _crm.AddPerson("Delete2", "User", 31, Sex.F, "Dev", "IT", "CV", new List<string>());
         var initialCount = _crm.GetAllPersons().Count;
 
         // Act
@@ -819,7 +968,7 @@ public class MyCrmTests : IDisposable
     public void DeletePerson_CannotDeleteSamePersonTwice()
     {
         // Arrange
-        var addedPerson = _crm.AddPerson("Test", "User", 30, new List<string>());
+        var addedPerson = _crm.AddPerson("Test", "User", 30, Sex.M, "Dev", "IT", "CV", new List<string>());
 
         // Act
         var firstDelete = _crm.DeletePerson(addedPerson.Id);
@@ -838,7 +987,7 @@ public class MyCrmTests : IDisposable
     public void CRUD_FullLifecycle_WorksCorrectly()
     {
         // Create
-        var newPerson = _crm.AddPerson("Integration", "Test", 33, new List<string> { "Testing" });
+        var newPerson = _crm.AddPerson("Integration", "Test", 33, Sex.M, "Tester", "QA", "QA expert", new List<string> { "Testing" });
         Assert.NotNull(newPerson);
         Assert.NotEqual(Guid.Empty, newPerson.Id);
 
@@ -848,7 +997,7 @@ public class MyCrmTests : IDisposable
         Assert.Equal("Integration", retrievedPerson.Name);
 
         // Update
-        var updatedPerson = _crm.UpdatePerson(newPerson.Id, "UpdatedIntegration", "UpdatedTest", 34, new List<string> { "UpdatedTesting" });
+        var updatedPerson = _crm.UpdatePerson(newPerson.Id, "UpdatedIntegration", "UpdatedTest", 34, Sex.M, "Senior Tester", "QA", "Updated CV", new List<string> { "UpdatedTesting" });
         Assert.NotNull(updatedPerson);
         Assert.Equal("UpdatedIntegration", updatedPerson.Name);
         Assert.Equal(34, updatedPerson.Age);
@@ -866,11 +1015,11 @@ public class MyCrmTests : IDisposable
     public void AddAndUpdate_PreservesIdAndAllowsRetrieval()
     {
         // Arrange & Act - Add
-        var added = _crm.AddPerson("AddUpdate", "Test", 25, new List<string> { "Skill1" });
+        var added = _crm.AddPerson("AddUpdate", "Test", 25, Sex.F, "Dev", "IT", "CV1", new List<string> { "Skill1" });
         var originalId = added.Id;
 
         // Act - Update
-        var updated = _crm.UpdatePerson(originalId, "Updated", "Test", 26, new List<string> { "Skill2" });
+        var updated = _crm.UpdatePerson(originalId, "Updated", "Test", 26, Sex.F, "Senior Dev", "IT", "CV2", new List<string> { "Skill2" });
 
         // Assert
         Assert.NotNull(updated);

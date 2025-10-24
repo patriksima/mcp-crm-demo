@@ -3,21 +3,35 @@ using ModelContextProtocol.Server;
 
 namespace McpEcho;
 
+public enum Sex
+{
+    M,
+    F
+}
+
 public class Person
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Surname { get; set; } = string.Empty;
     public int Age { get; set; }
+    public Sex Sex { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public string Department { get; set; } = string.Empty;
+    public string CvSummary { get; set; } = string.Empty;
     public List<string> Skills { get; set; } = new();
 
     // Primary constructor
-    public Person(Guid id, string name, string surname, int age, List<string> skills)
+    public Person(Guid id, string name, string surname, int age, Sex sex, string role, string department, string cvSummary, List<string> skills)
     {
         Id = id;
         Name = name;
         Surname = surname;
         Age = age;
+        Sex = sex;
+        Role = role;
+        Department = department;
+        CvSummary = cvSummary;
         Skills = skills;
     }
 }
@@ -81,6 +95,30 @@ public sealed class MyCrm : IDisposable
     public List<Person> GetPersonsBySkill([Description("Person skill")] string skill)
     {
         return _database.GetBySkill(skill);
+    }
+
+    [McpServerTool, Description("Get all persons from a specific department.")]
+    [McpMeta("category", "crm")]
+    [McpMeta("operation", "read")]
+    [McpMeta("dataSource", "sqlite")]
+    [McpMeta("resultType", "List<Person>")]
+    [McpMeta("context", "department-search")]
+    [McpMeta("aliases", "find-by-department, search-by-department")]
+    public List<Person> GetPersonsByDepartment([Description("Department name")] string department)
+    {
+        return _database.GetByDepartment(department);
+    }
+
+    [McpServerTool, Description("Get all persons with a specific role/job title.")]
+    [McpMeta("category", "crm")]
+    [McpMeta("operation", "read")]
+    [McpMeta("dataSource", "sqlite")]
+    [McpMeta("resultType", "List<Person>")]
+    [McpMeta("context", "role-search")]
+    [McpMeta("aliases", "find-by-role, search-by-role")]
+    public List<Person> GetPersonsByRole([Description("Role/job title")] string role)
+    {
+        return _database.GetByRole(role);
     }
 
     [McpServerTool, Description("Get all persons from the CRM system.")]
@@ -167,9 +205,13 @@ public sealed class MyCrm : IDisposable
         [Description("Person's first name")] string name,
         [Description("Person's surname")] string surname,
         [Description("Person's age")] int age,
+        [Description("Person's sex (M/F)")] Sex sex,
+        [Description("Person's role")] string role,
+        [Description("Person's department")] string department,
+        [Description("Person's CV summary")] string cvSummary,
         [Description("List of person's skills")] List<string> skills)
     {
-        var newPerson = new Person(Guid.NewGuid(), name, surname, age, skills);
+        var newPerson = new Person(Guid.NewGuid(), name, surname, age, sex, role, department, cvSummary, skills);
         return _database.Add(newPerson);
     }
 
@@ -185,9 +227,13 @@ public sealed class MyCrm : IDisposable
         [Description("Person's first name")] string name,
         [Description("Person's surname")] string surname,
         [Description("Person's age")] int age,
+        [Description("Person's sex (M/F)")] Sex sex,
+        [Description("Person's role")] string role,
+        [Description("Person's department")] string department,
+        [Description("Person's CV summary")] string cvSummary,
         [Description("List of person's skills")] List<string> skills)
     {
-        return _database.Update(id, name, surname, age, skills);
+        return _database.Update(id, name, surname, age, sex, role, department, cvSummary, skills);
     }
 
     [McpServerTool, Description("Delete a person from the CRM system by ID.")]
