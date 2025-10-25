@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 
-namespace McpEcho;
+namespace McpCrmDemo;
 
 public enum Sex
 {

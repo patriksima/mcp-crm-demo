@@ -1,7 +1,7 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
-namespace McpEcho;
+namespace McpCrmDemo;
 
 [McpServerResourceType]
 public class CrmResources : IDisposable

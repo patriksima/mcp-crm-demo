@@ -1,7 +1,7 @@
 using Xunit;
-using McpEcho;
+using McpCrmDemo;
 
-namespace McpEcho.Tests;
+namespace McpCrmDemo.Tests;
 
 public class MyCrmTests : IDisposable
 {
