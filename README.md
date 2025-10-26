@@ -206,7 +206,15 @@ This demo server can be used to:
 
 ## License
 
-This is a demonstration project. Please check the repository for license information.
+This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License (CC BY-NC-ND 4.0).
+
+**What this means:**
+- ✅ You can share and redistribute the code
+- ✅ You must give appropriate credit to the author
+- ❌ You cannot use it for commercial purposes
+- ❌ You cannot distribute modified versions
+
+See the [LICENSE](LICENSE) file for full details or visit [https://creativecommons.org/licenses/by-nc-nd/4.0/](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
 ## Contributing
 
