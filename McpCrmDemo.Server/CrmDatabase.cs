@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Text.Json;
 
-namespace McpCrmDemo;
+namespace McpCrmDemo.Server;
 
 public class CrmDatabase : IDisposable
 {

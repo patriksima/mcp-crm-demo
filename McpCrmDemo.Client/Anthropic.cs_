@@ -1,0 +1,133 @@
+﻿using Anthropic.SDK;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Client;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
+using Microsoft.Extensions.Logging;
+
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Configuration
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>();
+
+IClientTransport clientTransport = new StdioClientTransport(new StdioClientTransportOptions
+{
+    Name = "Demo Server",
+    Command = "dotnet",
+    Arguments = ["run", "--project", Path.Combine(GetCurrentSourceDirectory(), "../McpCrmDemo.Server")],
+});
+
+await using var mcpClient = await McpClient.CreateAsync(clientTransport!);
+
+var tools = await mcpClient.ListToolsAsync();
+var resources = await mcpClient.ListResourcesAsync();
+foreach (var tool in tools)
+{
+    Console.WriteLine($"Connected to server with tools: {tool.Name}");
+}
+
+foreach (var resource in resources)
+{
+    Console.WriteLine($"Connected to server with resources: {resource.Name}");
+}
+
+// logging
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.ClearProviders();
+    builder.AddSimpleConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.SingleLine = true;
+        options.TimestampFormat = "[HH:mm:ss] ";
+    });
+    builder.SetMinimumLevel(LogLevel.Debug);
+    // builder.AddConsole();
+    // builder.SetMinimumLevel(LogLevel.Information);
+});
+
+using var anthropicClient = new AnthropicClient(new APIAuthentication(builder.Configuration["ANTHROPIC_API_KEY"]))
+    .Messages
+    .AsBuilder()
+    .UseFunctionInvocation(loggerFactory)
+    .Build();
+
+var options = new ChatOptions
+{
+    MaxOutputTokens = 1000,
+    ModelId = "claude-haiku-4-5-20251001",
+    Tools = [.. tools],
+};
+
+
+Console.ForegroundColor = ConsoleColor.Green;
+Console.WriteLine("MCP Client Started!");
+Console.ResetColor();
+
+if (options.Tools is not null && options.Tools.Any())
+{
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.WriteLine("[LOG] Tools used for this query:");
+    foreach (var tool in options.Tools)
+    {
+        Console.WriteLine($" - {tool.Name}");
+    }
+
+    Console.ResetColor();
+}
+
+var messages = new List<ChatMessage>();
+var sb = new StringBuilder();
+
+PromptForInput();
+while (Console.ReadLine() is { } query && !"exit".Equals(query, StringComparison.OrdinalIgnoreCase))
+{
+    if (string.IsNullOrWhiteSpace(query))
+    {
+        PromptForInput();
+        continue;
+    }
+
+    messages.Add(new ChatMessage(ChatRole.User, query));
+
+    var stopwatch = Stopwatch.StartNew();
+
+    await foreach (var message in anthropicClient.GetStreamingResponseAsync(messages, options))
+    {
+        Console.Write(message);
+        sb.Append(message.ToString());
+    }
+
+    stopwatch.Stop();
+
+    Console.WriteLine();
+    Console.ForegroundColor = ConsoleColor.Magenta;
+    Console.WriteLine($"[LOG] Response took: {stopwatch.ElapsedMilliseconds} ms");
+    Console.ResetColor();
+
+    Console.WriteLine();
+    sb.AppendLine();
+    messages.Add(new ChatMessage(ChatRole.Assistant, sb.ToString()));
+    sb.Clear();
+
+    PromptForInput();
+}
+
+static void PromptForInput()
+{
+    Console.WriteLine("Enter a command (or 'exit' to quit):");
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.Write("> ");
+    Console.ResetColor();
+}
+
+static string GetCurrentSourceDirectory([CallerFilePath] string? currentFile = null)
+{
+    Debug.Assert(!string.IsNullOrWhiteSpace(currentFile));
+    return Path.GetDirectoryName(currentFile) ??
+           throw new InvalidOperationException("Unable to determine source directory.");
+}

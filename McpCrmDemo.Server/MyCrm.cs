@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 
-namespace McpCrmDemo;
+namespace McpCrmDemo.Server;
 
 public enum Sex
 {
@@ -37,16 +37,10 @@ public class Person
 }
 
 [McpServerToolType]
-public sealed class MyCrm : IDisposable
+public sealed class MyCrm(string? databasePath = null) : IDisposable
 {
-    private readonly CrmDatabase _database;
-    private readonly Guid InstanceId;
-
-    public MyCrm(string? databasePath = null)
-    {
-        InstanceId = Guid.NewGuid();
-        _database = new CrmDatabase(databasePath);
-    }
+    private readonly CrmDatabase _database = new(databasePath);
+    private readonly Guid _instanceId = Guid.NewGuid();
 
 
     [McpServerTool, Description("Get personal information by ID.")]
@@ -257,7 +251,7 @@ public sealed class MyCrm : IDisposable
     [McpMeta("aliases", "get-instance-id, instance-guid, server-id")]
     public Guid GetInstanceId()
     {
-        return InstanceId;
+        return _instanceId;
     }
 
     public void Dispose()

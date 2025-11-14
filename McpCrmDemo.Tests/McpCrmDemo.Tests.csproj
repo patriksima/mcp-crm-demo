@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\McpCrmDemo\McpCrmDemo.csproj" />
+    <ProjectReference Include="..\McpCrmDemo.Server\McpCrmDemo.Server.csproj" />
   </ItemGroup>
 
 </Project>

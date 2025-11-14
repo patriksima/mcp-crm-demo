@@ -1,5 +1,5 @@
 using Xunit;
-using McpCrmDemo;
+using McpCrmDemo.Server;
 
 namespace McpCrmDemo.Tests;
 
